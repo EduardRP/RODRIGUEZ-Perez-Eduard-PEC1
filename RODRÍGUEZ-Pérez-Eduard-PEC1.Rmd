@@ -1,0 +1,152 @@
+---
+title: "PEC1"
+author: "Eduard Rodríguez Pérez"
+date: "2024-11-04"
+output:
+  pdf_document:
+   toc: true
+toc-title: "Contenidos"
+---
+
+```{r setup, include=FALSE}
+# knitr options
+knitr::opts_chunk$set(echo = TRUE,fig.show = "hold",
+               collapse = TRUE)
+
+```
+
+
+# Introducción
+Este informe tratará de analizar en poca profundidad un conjunto de datos de metabolómica de un estudio en humanos.
+
+Se parte del *dataset* "cachexia" disponible en:
+https://rest.xialab.ca/api/download/metaboanalyst/human_cachexia.csv
+Dicho dataset proviene del estudio de Eisner et al. (2010) *Learning to predict cancer-associated skeletal muscle wasting from 1h-nmr profiles of urinary metabolites Metabolomics* 7:25-34
+
+En el mencionado estudio se comparan las concentraciones de distintas molèculas presentes en la orina de 47 pacientes de cáncer de colon o pulmón, asi como de 30 individuos sanos, con el objetivo de predecir la cachexia o pérdida de masa muscular debida al cáncer. Con dichos datos, los investigadores efectúan un análisis de aquellos marcadores con mayor capacidad de predicción de pérdida muscular mediante la creación de modelos predictivos. Para llegar a estos modelos usan métodos estadísticos estándar así como herramientas de inteligencia artificial tipo *machine learning*.
+
+Los datos de metabolómica cuantitativos se obtuvieron a partir de espectros de resonancia magnética nuclear de muestras de orina, usando métodos en paralelo para corroborar la extrapolación cuantitativa a partir de las concentraciones d creatinina i de varios aminoácidos.
+
+Adicionalmente, se realizaron métodos estadísticos para la normalización de los datos teniendo en cuenta que las muestras no se habían recogido en condiciones semejantes i por tanto podía haber dilución de la orina en función de la ingesta de agua horas antes del muestreo. En ese sentido, se usó tanto una normalización respecto a la concentración de creatinina, respecto al área total de picos de cada muestra (asumiendo que el área bajo el espectro de RMN es una función linear de la concentración de los metabolitos detectables), así como una normalización respecto al cociente de probabilidad que estima el factor de dilución más probable a partir de las amplitudes del espectro a partir de un espectro de referencia.
+
+Finalmente, se realizó una clasificación de los individuos bajo estudio en función de si presentaban cachexia o no, a través del análisis de imágenes de tomografia axial computerizada de la superfície de tejido muscular en el corte a la altura de la tercera vértebra lumbar. El porcentaje de diferencia en masa muscular se usó como la variable para dividir en sendos grupos.
+
+# Objetivos del Estudio
+
+- Describir el conjunto de datos.
+- Organizar los datos en un objeto `SummarizedExperiment` y/o `ExpressionSet` según convenga.
+- Explorar el *dataset* para obtener una visión general relativa al contenido trabajado en la asignatura hasta el momento.
+
+Entre los objetivos del trabajo se incluye la creación del repositorio de `github` RODRIGUEZ-Perez-Eduard-PEC1 que no forma parte del informe en sí pero que se referencia en el mismo, en el apartado de Resultados.
+
+# Materiales y métodos
+## Preprocesado de los datos
+El *dataset* bajo estudio se ha procesado mediante distintos paquetes de lenguaje R usando el software RStudio. El objetivo es preparar los datos presentes en el dataset `human_chachexia.csv`, si bien estos ya parecen presentar un preprocesado medio (normalización) según el estudio, cosa que tratamos de confirmar más adelante en este informe.
+### Implementación de Bioconductor: SummarizedExperiment y ExpressionSet
+Con tal de implementar las herramientas bioinformáticas presentadas en la asignatura, en este trabajo se hace uso de los objetos SummarizedExperiment y ExpressionSet del paquete Bioconductor para análisis de datos ómicos.
+
+Si bien se aplica SummarizedExperiment a forma de ejercicio práctico y como requerimiento del presente informe, éste tipo de objeto suele implementarse en experimentos con secuencias genéticas, donde las filas representan genes, transcritos o exones, entre otros (Figura 1).
+
+![Fuente:*https://montilab.github.io/BS831/articles/docs/ExpressionSet.html#the-summarizedexperiment-object*](imagenes/SummarizedExperiment.png)
+
+Mientras que nuestro *dataset* se corresponde más con un objeto del tipo `ExpressionSet` para experimentos tipo array, de expresión génica y datos ómicos de similar estructura. En este objeto, las filas se corresponden a los genes u otros carácteres a medir, como metabolitos en nuestro caso, mientras que las columnas se corresponden a las muestras con su respectivo fenotipo (ver Figura 2).
+
+![Fuente:*https://montilab.github.io/BS831/articles/docs/ExpressionSet.html#the-expressionset-object*](imagenes/ExpressionSet.png)
+
+Para ambos casos, tendremos que trasponer la tabla inicial `human_cachexia.csv`antes de transformarla a sendos objetos.
+
+\newpage
+## Exploración de los datos
+
+
+
+\newpage
+
+# Resultados
+
+## Preprocesado de los datos
+Importamos los datos *cachexia* de nuestra carpeta de trabajo:
+
+```{r csv_cachexia}
+tabla_datos <- read.csv("human_cachexia.csv", row.names = 1)
+tabla_datos$Muscle.loss <- as.factor(tabla_datos$Muscle.loss)
+str(tabla_datos)
+
+datos_tr <- t(tabla_datos)
+```
+### Implementación de SummarizedExperimetn
+Instalamos los paquetes necesarios para ejecturar `SummarizedExperiment`.
+
+```{r, sumexp, results='hide', message=FALSE}
+# Instalamos los paquetes necesarios
+if (!require("BiocManager", quietly = TRUE))
+    install.packages("BiocManager")
+
+BiocManager::install("SummarizedExperiment")
+
+
+
+library(SummarizedExperiment)
+
+datos_se <- SummarizedExperiment(assays = list(counts=datos_tr))
+```
+
+
+
+Vemos qué tal se muestra el objeto:
+```{r ver_se} 
+# Visualizamos el formato SummarizedExperiment resultante
+datos_se
+```
+
+### Implementación de ExpressionSet
+
+```{r}
+BiocManager::install("Biobase")
+datos_es<-ExpressionSet(datos_tr)
+class(datos_es)
+datos_es
+```
+```{r}
+
+columnDesc <- data.frame(labelDescription=rownames(datos_tr))
+datos_tr <- as.data.frame(datos_tr)
+str(columnDesc)
+str(datos_tr)
+View(datos_tr)
+myAnnotDF <- new("AnnotatedDataFrame", data=tabla_datos, varMetadata= columnDesc)
+show(myAnnotDF)
+```
+```{r}
+phenoData(datos_es) <- myAnnotDF
+show(datos_es)
+```
+
+## Exploración de los datos
+Realizamos un breve análisis estadístico de los datos.
+
+Tenemos 77 muestras, 47 de cachexia y 30 controles, así como 64 marcadores distintos en orina.
+
+```{r}
+summary(tabla_datos)
+```
+
+
+
+
+## Creación del repositorio de github
+
+```{r}
+# Creamos la versión en texto de los datos.
+write.table(tabla_datos, "human_cachexia.txt", 
+            row.names = TRUE, 
+            quote = TRUE, 
+            col.names = TRUE)
+```
+*
+Enlace a github:  *https://github.com/EduardRP/RODRIGUEZ-Perez-Eduard-PEC1.git*
+
+# Discusión y limitaciones y conclusiones del estudio
+
+Este estudio ha resultado ser muy limitado debido a la falta de práctica con los objetos SummarizedExperiment y ExpressionSet. De haberle dedicado más tiempo, habría sido interesante realizar un estudio adecuado de las variables entre ambos grupos, si bien no he sabido analizarlos o bien he tenido problemas al intentarlo debido al excesivo número de variables.
+
