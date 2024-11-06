@@ -68,10 +68,9 @@ Para ambos casos, tendremos que trasponer la tabla inicial `human_cachexia.csv`a
 Importamos los datos *cachexia* de nuestra carpeta de trabajo:
 
 ```{r csv_cachexia}
+#Tratamos los datos para obtener una tabla traversa.
 tabla_datos <- read.csv("human_cachexia.csv", row.names = 1)
 tabla_datos$Muscle.loss <- as.factor(tabla_datos$Muscle.loss)
-str(tabla_datos)
-
 datos_tr <- t(tabla_datos)
 ```
 ### Implementación de SummarizedExperimetn
@@ -108,16 +107,14 @@ class(datos_es)
 datos_es
 ```
 ```{r}
-
+# Añadimos anotaciones de los datos a myAnnotDF
 columnDesc <- data.frame(labelDescription=rownames(datos_tr))
 datos_tr <- as.data.frame(datos_tr)
-str(columnDesc)
-str(datos_tr)
-View(datos_tr)
 myAnnotDF <- new("AnnotatedDataFrame", data=tabla_datos, varMetadata= columnDesc)
 show(myAnnotDF)
 ```
 ```{r}
+# Incluimos las anotaciones al ExpressionSet "datos_es"
 phenoData(datos_es) <- myAnnotDF
 show(datos_es)
 ```
@@ -127,11 +124,18 @@ Realizamos un breve análisis estadístico de los datos.
 
 Tenemos 77 muestras, 47 de cachexia y 30 controles, así como 64 marcadores distintos en orina.
 
-```{r}
-summary(tabla_datos)
+Los dos grupos (cachexia y control) han de esperar tener diferencias significativas en algunos de los marcadores. Sin embargo, es posible que existan relaciones entre los marcadores que provoquen que de forma individual no sean lo suficientemente predictivos.
+
+Realizamos un estudio de cada una de las variables, para ver de forma preliminar si hay una distribución en dos grupos (resultados al final del documento).
+
+```{r results='hold'}
+# Creamos histogramas individuales de cada factor
+tabla_datos$Muscle.loss <- as.numeric(tabla_datos$Muscle.loss)
+opt <- par(mfrow=c(3,5))
+for (i in 1:ncol(tabla_datos))
+  hist(tabla_datos[,i], main = names(tabla_datos)[i])
+par(opt)
 ```
-
-
 
 
 ## Creación del repositorio de github
